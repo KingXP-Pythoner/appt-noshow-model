@@ -2,7 +2,7 @@
     # import the required libraries
 import pandas as pd
 import numpy as np
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, LiteralString, Optional, Tuple, Union
 from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 # import Random undersampler from imblearn
@@ -181,9 +181,9 @@ class ModelRunner():
     test_fpr: np.ndarray
     test_tpr: np.ndarray
     test_thresholds = None
-    pick_results: List[str] | None
+    pick_results: Literal['validation','test', 'all']
     
-    def __init__(self, model, X_train, X_test, y_train, y_test, X_val, y_val, pick_results:List[str] | None):
+    def __init__(self, model, X_train, X_test, y_train, y_test, X_val, y_val, pick_results:Literal['validation','test', 'all']='all'):
         self.model = model
         self.X_train = X_train
         self.X_test = X_test
@@ -221,14 +221,19 @@ class ModelRunner():
         self.test_fpr, self.test_tpr, self.test_thresholds = roc_curve(self.y_test, self.test_y_pred_proba)
     
     def __plot_roc_curve__(self):
-        for data in [(self.val_fpr, self.val_tpr, self.val_roc_auc_score, 'Validation'), (self.test_fpr, self.test_tpr, self.test_roc_auc_score, 'Test')]:
-            fpr, tpr, roc_auc_score, label = data
-            plt.plot(fpr, tpr, label=f'{label} (AUC = {roc_auc_score:.2f})')
-        plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+        if self.pick_results == 'validation':
+            plt.plot(self.val_fpr, self.val_tpr, label=f'Validation (AUC = {self.val_roc_auc_score:.2f})')
+            plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+        elif self.pick_results == 'test':
+            plt.plot(self.test_fpr, self.test_tpr, label=f'Test (AUC = {self.test_roc_auc_score:.2f})')
+            plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+        else:
+            for data in [(self.val_fpr, self.val_tpr, self.val_roc_auc_score, 'Validation'), (self.test_fpr, self.test_tpr, self.test_roc_auc_score, 'Test')]:
+                fpr, tpr, roc_auc_score, label = data
+                plt.plot(fpr, tpr, label=f'{label} (AUC = {roc_auc_score:.2f})')
+            plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        
-        
     
     def __returns_in_dict__(self):
         # returns the results in a dictionary
@@ -253,39 +258,59 @@ class ModelRunner():
             'test_thresholds': self.test_thresholds
         }
         
-    def __pretty_print__(self):
+    def __pretty_print__(self, result_type: Literal['validation','test', 'all']):
         # Pretty print the results
-        print(F'Validation Set\n')
-        print(f'Accuracy: {self.val_accuracy:.2f}')
-        # print validation confusion matrix as a table with labels of true positive, false positive, true negative, and false negative
-        print(f'Confusion Matrix:\n{pd.DataFrame(self.val_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
-        print(f'Classification Report:\n{self.val_classification_report}')
-        print(f'ROC AUC Score: {self.val_roc_auc_score:.2f}')
-        print('Test Set')
-        print(f'Accuracy: {self.test_accuracy:.2f}')
-        print(f'Confusion Matrix:\n{pd.DataFrame(self.test_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
-        print(f'Classification Report:\n{self.test_classification_report}')
-        print(f'ROC AUC Score: {self.test_roc_auc_score:.2f}')
+        if result_type == 'validation':
+            print(F'Validation Set\n')
+            print(f'Accuracy: {self.val_accuracy:.2f}')
+            # print validation confusion matrix as a table with labels of true positive, false positive, true negative, and false negative
+            print(f'Confusion Matrix:\n{pd.DataFrame(self.val_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
+            print(f'Classification Report:\n{self.val_classification_report}')
+            print(f'ROC AUC Score: {self.val_roc_auc_score:.2f}')
+        elif result_type == 'test':
+            print('Test Set')
+            print(f'Accuracy: {self.test_accuracy:.2f}')
+            print(f'Confusion Matrix:\n{pd.DataFrame(self.test_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
+            print(f'Classification Report:\n{self.test_classification_report}')
+            print(f'ROC AUC Score: {self.test_roc_auc_score:.2f}')
+        else:
+            print(F'Validation Set\n')
+            print(f'Accuracy: {self.val_accuracy:.2f}')
+            print(f'Confusion Matrix:\n{pd.DataFrame(self.val_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
+            print(f'Classification Report:\n{self.val_classification_report}')
+            print(f'ROC AUC Score: {self.val_roc_auc_score:.2f}')
+            print('\n')
+            print('Test Set')
+            print(f'Accuracy: {self.test_accuracy:.2f}')
+            print(f'Confusion Matrix:\n{pd.DataFrame(self.test_confusion_matrix, columns=["Predicted Negative", "Predicted Positive"], index=["Actual Negative", "Actual Positive"])}')
+            print(f'Classification Report:\n{self.test_classification_report}')
+            print(f'ROC AUC Score: {self.test_roc_auc_score:.2f}')
         plt.legend()
         plt.show()
         
-    def invoke(self):
+    def invoke(self)->tuple:
         self.__run_model__()
         self.__plot_roc_curve__()
-        if self.pick_results != None:
-            # For each key in the pick_results list, fetch the corresponding value from the dictionary and return all in a tuple
-            return_list = []
-            for key in self.pick_results:
-                if key not in self.__returns_in_dict__().keys():
-                    raise KeyError(f"KeyError: '{key}' not found in the dictionary")
-                return_list.append(self.__returns_in_dict__()[key])
-            self.__pretty_print__()
-            return tuple(return_list)
+        if self.pick_results == 'validation':
+            self.__pretty_print__('validation')
+            # return the results for the validation set as a tuple
+            return self.val_accuracy, self.val_confusion_matrix, self.val_classification_report, self.val_roc_auc_score, self.val_fpr, self.val_tpr, self.val_thresholds
+        elif self.pick_results == 'test':
+            self.__pretty_print__('test')
+            # return the results for the testing set as a tuple
+            return self.test_accuracy, self.test_confusion_matrix, self.test_classification_report, self.test_roc_auc_score, self.test_fpr, self.test_tpr, self.test_thresholds
+        else:
+            self.__pretty_print__('all')
+            # return the results for the validation and testing set as a tuple
+            return self.val_accuracy, self.val_confusion_matrix, self.val_classification_report, self.val_roc_auc_score, self.val_fpr, self.val_tpr, self.val_thresholds, self.test_accuracy, self.test_confusion_matrix, self.test_classification_report, self.test_roc_auc_score, self.test_fpr, self.test_tpr, self.test_thresholds
+            
+            
+
         
 
 
 # Create a pipeline that will split the dataset, undersample the training data, scale the features, and run the model
-def run_pipeline(df:pd.DataFrame, target_col_label:str, model:Any, selected_cols:List[str], lvl1_test_size:float, lvl2_test_size:float, pick_results:List[str] | None, random_state:int=42):
+def run_pipeline(df:pd.DataFrame, target_col_label:str, model:Any, selected_cols:List[str], lvl1_test_size:float, lvl2_test_size:float, pick_results:Literal['validation', 'test','all'], random_state:int=42):
     """
     Run the pipeline that will split the dataset, undersample the training data, apply frequency encoding, scale the features, and run the model.
     
