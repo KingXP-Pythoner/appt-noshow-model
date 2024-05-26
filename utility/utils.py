@@ -1,8 +1,9 @@
 # Create abstraction functions
 # import the required libraries
+from re import X
 import pandas as pd
 import numpy as np
-from typing import Any, Dict, List, Literal, LiteralString, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from sklearn.metrics import (
     confusion_matrix,
     classification_report,
@@ -61,11 +62,13 @@ def train_val_test_split(
     from sklearn.model_selection import train_test_split
 
     # Initial stratified split into training and temp set (70% training, 30% temp)
-    train_set, temp_set = train_test_split(X, test_size=lvl1_test_size, random_state=42)
+    train_set, temp_set = train_test_split(
+        X, test_size=lvl1_test_size, stratify=X['no_show'], random_state=random_state
+    )
 
     # Stratified split of the temp set into validation and test sets (each 15% of the total data)
     val_set, test_set = train_test_split(
-        temp_set, test_size=lvl2_test_size, random_state=42
+        temp_set, test_size=lvl2_test_size, random_state=random_state, stratify=temp_set['no_show']
     )
 
     return (
@@ -176,6 +179,7 @@ class ModelRunner:
         y_test (pd.Series): The testing target variable.
         X_val (pd.DataFrame): The validation features.
         y_val (pd.Series): The validation target variable.
+        cls_report_as_dict (bool): If True, the classification report will be returned as a dictionary. If False, the classification report will be returned as a string.
 
     Returns:
     val_accuracy (float): The accuracy score for the validation set.
@@ -192,7 +196,7 @@ class ModelRunner:
     test_fpr (np.ndarray): The false positive rate for the testing set.
     test_tpr (np.ndarray): The true positive rate for the testing set.
     test_thresholds (np.ndarray): The thresholds for the testing set.
-    
+
     """
 
     model: Any
@@ -223,6 +227,7 @@ class ModelRunner:
     test_thresholds = None
     pick_results: Literal["validation", "test", "all"]
     plot: bool
+    cls_report_as_dict: bool
 
     def __init__(
         self,
@@ -235,6 +240,7 @@ class ModelRunner:
         y_val,
         pick_results: Literal["validation", "test", "all"] = "all",
         plot: bool = True,
+        cls_report_as_dict: bool = False,
     ):
         self.model = model
         self.X_train = X_train
@@ -244,6 +250,8 @@ class ModelRunner:
         self.X_val = X_val
         self.y_val = y_val
         self.pick_results = pick_results
+        self.plot = plot
+        self.cls_report_as_dict = cls_report_as_dict
 
     def __run_model__(self):
         # Fit the model on the training data
@@ -263,10 +271,10 @@ class ModelRunner:
         # Calculate the classification report
 
         self.val_classification_report = classification_report(
-            self.y_val, self.val_y_pred
+            self.y_val, self.val_y_pred, output_dict=self.cls_report_as_dict if self.cls_report_as_dict == True else False
         )
         self.test_classification_report = classification_report(
-            self.y_test, self.test_y_pred
+            self.y_test, self.test_y_pred, output_dict=self.cls_report_as_dict if self.cls_report_as_dict == True else False
         )
         # Calculate the ROC AUC score
         self.val_roc_auc_score = float(roc_auc_score(self.y_val, self.val_y_pred_proba))
@@ -306,6 +314,8 @@ class ModelRunner:
             plt.plot([0, 1], [0, 1], color="navy", linestyle="--")
         plt.xlabel("False Positive Rate")
         plt.ylabel("True Positive Rate")
+        plt.legend()
+        plt.show()
 
     def __returns_in_dict__(self):
         # returns the results in a dictionary
@@ -365,8 +375,6 @@ class ModelRunner:
             )
             print(f"Classification Report:\n{self.test_classification_report}")
             print(f"ROC AUC Score: {self.test_roc_auc_score:.2f}")
-        plt.legend()
-        plt.show()
 
     def invoke(self) -> tuple:
         self.__run_model__()
@@ -388,7 +396,7 @@ class ModelRunner:
                 None,
                 None,
                 None,
-                None
+                None,
             )
         elif self.pick_results == "test":
             self.__pretty_print__("test")
@@ -407,7 +415,7 @@ class ModelRunner:
                 None,
                 None,
                 None,
-                None
+                None,
             )
         else:
             self.__pretty_print__("all")
@@ -431,7 +439,7 @@ class ModelRunner:
 
 
 # Create a pipeline that will split the dataset, undersample the training data, scale the features, and run the model
-def run_pipeline(
+def preprocess_to_modelling_pipeline(
     df: pd.DataFrame,
     target_col_label: str,
     model: Any,
@@ -441,6 +449,7 @@ def run_pipeline(
     pick_results: Literal["validation", "test", "all"],
     random_state: int = 42,
     plot: bool = True,
+    cls_report_as_dict: bool = False,
 ):
     """
     Run the pipeline that will split the dataset, undersample the training data, apply frequency encoding, scale the features, and run the model.
@@ -454,8 +463,6 @@ def run_pipeline(
         random_state (int): Controls the shuffling applied to the data before applying the split.
 
     Returns:
-    val_y_pred (np.ndarray): The predicted target values for the validation set.
-    val_y_pred_proba (np.ndarray): The predicted probabilities for the validation set.
     val_accuracy (float): The accuracy score for the validation set.
     val_confusion_matrix (np.ndarray): The confusion matrix for the validation set.
     val_classification_report (str | dict): The classification report for the validation set.
@@ -463,8 +470,6 @@ def run_pipeline(
     val_fpr (np.ndarray): The false positive rate for the validation set.
     val_tpr (np.ndarray): The true positive rate for the validation set.
     val_thresholds (np.ndarray): The thresholds for the validation set.
-    test_y_pred (np.ndarray): The predicted target values for the testing set.
-    test_y_pred_proba (np.ndarray): The predicted probabilities for the testing set.
     test_accuracy (float): The accuracy score for the testing set.
     test_confusion_matrix (np.ndarray): The confusion matrix for the testing set.
     test_classification_report (str | dict): The classification report for the testing set.
@@ -520,5 +525,31 @@ def run_pipeline(
         X_val_scaled,
         y_val,
         pick_results,
+        plot,
+        cls_report_as_dict,
     )
     return model_runner.invoke()
+
+
+def preprocessing_pipeline(df:pd.DataFrame, selected_cols:List[str], target_col_label:str)->Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    This function will take the dataset, apply frequency encoding to the neighbourhood column, and drop the original neighbourhood column, scale the features, and return the transformed dataset.
+    
+    Args:
+    df (pd.DataFrame): The dataset to be transformed.
+    selected_cols (list): The columns to be used as features.
+    target_col_label (str): The label of the target column.
+    
+    Returns:
+    X_train_scaled (pd.DataFrame): The scaled features.
+    """
+    
+    X = df[selected_cols]
+    y = df[target_col_label]
+    
+    X, _ = apply_frequency_encoding(X, no_fmap_columns_dict={"neighbourhood": "neighbourhood_freq"})
+    X.drop(columns=["neighbourhood"], axis=1, inplace=True)
+    X, _, _ = scale_features(X, X, X)
+    
+    return (pd.DataFrame(X, columns=X.columns), pd.DataFrame(y, columns=[target_col_label]))
+    
