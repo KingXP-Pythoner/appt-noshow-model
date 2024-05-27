@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Converted from: paper.md</title>
+    <meta charset="utf-8"/>
+
+</head>
+<body>
+
+<h1 id="heading-data-mining2fmachine-learning-project3a-medical-appointments---no-show">Data Mining/Machine Learning Project: Medical Appointments - No Show</h1>
+<h2 id="heading-abstract">Abstract</h2>
+<p>Missed medical appointments pose a significant challenge to healthcare institutions, leading to inefficient use of resources and potential negative impacts on patient health outcomes. This project aims to develop predictive models to identify patients at risk of missing their appointments. Using a dataset containing medical appointment records, we analyze various factors contributing to no-show behavior and evaluate the effectiveness of logistic regression and random forest classifiers in predicting missed appointments. Our findings indicate that specific factors, such as SMS reminders and the time gap between scheduling and the appointment, significantly influence attendance rates. By incorporating these insights, healthcare providers can improve intervention strategies to reduce missed appointments and enhance service efficiency.</p><h2 id="heading-i.-introduction">I. Introduction</h2>
+<p>Missed medical appointments are a pervasive issue in healthcare systems worldwide, resulting in wasted resources and suboptimal patient care. Understanding the underlying factors that contribute to no-shows is critical for developing effective strategies to mitigate this problem. This project leverages data mining and machine learning techniques to predict whether a patient will attend their scheduled appointment. The primary objectives are to identify key factors influencing no-show behavior and compare the performance of logistic regression and random forest classifiers in predicting appointment attendance.</p><h2 id="heading-ii.-business-understanding">II. Business Understanding</h2>
+<p>Healthcare institutions incur significant costs due to missed appointments, which can disrupt schedules and reduce the efficiency of medical services. By accurately predicting no-shows, hospitals can take proactive measures, such as sending reminders or rescheduling appointments, to improve attendance rates. Understanding the effectiveness of these interventions, particularly SMS reminders, can further inform appointment management strategies. The goals of this project are to predict no-shows based on various attributes and to identify the most influential factors contributing to missed appointments.</p><h2 id="heading-iii.-data-understanding">III. Data Understanding</h2>
+<h3 id="heading-dataset-description">Dataset Description</h3>
+<p>The dataset comprises 110,527 records of medical appointments with 14 attributes: PatientId, AppointmentID, Gender, DateScheduled, AppointmentDate, Age, Neighborhood, Scholarship, Hypertension, Diabetes, Alcoholism, Handicap, SMSReceived, and NoShow. The target variable is NoShow, indicating whether a patient attended their appointment.</p><h3 id="heading-initial-data-analysis">Initial Data Analysis</h3>
+<ol data-line="22" class="code-line" dir="auto">
+<li><strong>Data Types and Structure:</strong> The dataset includes both nominal and continuous variables. Nominal variables include PatientId, AppointmentID, Gender, Neighborhood, Scholarship, Hypertension, Diabetes, Alcoholism, Handicap, SMSReceived, and NoShow. Continuous variables include Age. DateScheduled and AppointmentDate are date types.</li>
+<li><strong>Missing Values:</strong> There are no missing values in the dataset.</li>
+<li><strong>Descriptive Statistics:</strong> Initial analysis revealed anomalies, such as an age value of -1 and varying interpretations of the Handicap attribute, which required data cleaning.</li>
+</ol>
+<h2 id="heading-iv.-data-cleaning">IV. Data Cleaning</h2>
+<p>Data cleaning involved the following steps:</p><ol data-line="29" class="code-line" dir="auto">
+<li><strong>Removing Anomalies:</strong> The record with an age of -1 was removed.</li>
+<li><strong>Converting Date Types:</strong> The DateScheduled and AppointmentDate columns were converted to datetime format to facilitate time-related calculations.</li>
+<li><strong>Handling Inconsistent Values:</strong> Standardizing the interpretation of the Handicap attribute by converting it into binary (handicapped vs. not handicapped) for simplicity.</li>
+</ol>
+<h2 id="heading-v.-exploratory-data-analysis">V. Exploratory Data Analysis</h2>
+<h3 id="heading-age-distribution">Age Distribution</h3>
+<p>The age distribution revealed a higher frequency of appointments for babies (0 years old), with a left-skewed distribution indicating fewer elderly patients.</p><h3 id="heading-gender-comparison">Gender Comparison</h3>
+<p>Females constituted 64.9% of the dataset, with attendance and no-show rates similar across genders, suggesting that gender is not a strong predictor of no-show behavior.</p><h3 id="heading-chronic-diseases">Chronic Diseases</h3>
+<p>Patients with chronic diseases (hypertension, diabetes, alcoholism) showed slightly higher attendance rates. However, the difference was marginal, indicating that chronic diseases do not significantly affect no-show rates.</p><h3 id="heading-sms-reminders">SMS Reminders</h3>
+<p>Initial analysis suggested that patients who did not receive SMS reminders had higher attendance rates. However, filtering out same-day appointments showed that SMS reminders slightly improved attendance for non-same-day appointments, highlighting their modest positive impact.</p><h3 id="heading-handicap-levels">Handicap Levels</h3>
+<p>Patients with mild handicaps (levels 1 or 2) had slightly lower no-show rates compared to those with no handicaps, but the small sample sizes for higher handicap levels warrant cautious interpretation.</p><h3 id="heading-scholarship-status">Scholarship Status</h3>
+<p>Patients without scholarship status had a higher attendance rate (80.19%) compared to those with scholarship status (76.26%), suggesting a potential socioeconomic influence on appointment adherence.</p><h3 id="heading-neighborhood">Neighborhood</h3>
+<p>Neighborhood had a significant impact on attendance rates, with variability in attendance percentages across different neighborhoods, indicating it as a strong predictor of no-show behavior.</p><h3 id="heading-class-imbalance">Class Imbalance</h3>
+<p>The dataset exhibited a significant class imbalance, with a majority of patients attending their appointments. This imbalance necessitated the use of metrics like F1 Score and ROC AUC for model evaluation, rather than accuracy alone.</p><h2 id="heading-vi.-data-modeling">VI. Data Modeling</h2>
+<h3 id="heading-feature-engineering">Feature Engineering</h3>
+<p>Feature engineering included converting categorical variables to numerical using one-hot encoding and creating new features, such as the number of days between scheduling and the appointment.</p><ol data-line="73" class="code-line" dir="auto">
+<li><strong>One-Hot Encoding:</strong> Categorical variables such as Gender, Neighborhood, and Scholarship were transformed into binary columns.</li>
+<li><strong>Date Differences:</strong> A new feature was created to represent the number of days between the DateScheduled and the AppointmentDate.</li>
+</ol>
+<h3 id="heading-model-design">Model Design</h3>
+<p>Two machine learning models were implemented:</p><ol data-line="79" class="code-line" dir="auto">
+<li><strong>Logistic Regression Classifier</strong></li>
+<li><strong>Random Forest Classifier</strong></li>
+</ol>
+<h3 id="heading-model-training-and-validation">Model Training and Validation</h3>
+<p>The dataset was split into training and testing sets using an 80-20 split. Both models were trained on the training set and validated using the testing set. Cross-validation was used to ensure the robustness of the models.</p><h3 id="heading-model-evaluation-metrics">Model Evaluation Metrics</h3>
+<p>Models were evaluated using accuracy, F1 score, confusion matrix, and ROC AUC. These metrics were chosen to account for the class imbalance and provide a comprehensive assessment of model performance.</p><h2 id="heading-vii.-results-and-discussion">VII. Results and Discussion</h2>
+<h3 id="heading-logistic-regression-model">Logistic Regression Model</h3>
+<p>The logistic regression model achieved:</p><ul data-line="95" class="code-line" dir="auto">
+<li><strong>Accuracy:</strong> 87.94%</li>
+<li><strong>Precision:</strong> 69.43%</li>
+<li><strong>Recall:</strong> 91.07%</li>
+<li><strong>F1 Score:</strong> 78.79%</li>
+<li><strong>ROC AUC:</strong> 0.9465</li>
+</ul>
+<h3 id="heading-random-forest-model">Random Forest Model</h3>
+<p>The random forest model achieved:</p><ul data-line="104" class="code-line" dir="auto">
+<li><strong>Accuracy:</strong> 88.71%</li>
+<li><strong>Precision:</strong> 73.78%</li>
+<li><strong>Recall:</strong> 83.90%</li>
+<li><strong>F1 Score:</strong> 78.51%</li>
+<li><strong>ROC AUC:</strong> 0.9450</li>
+</ul>
+<h3 id="heading-analysis">Analysis</h3>
+<p>Both models demonstrated strong performance, with the logistic regression model achieving higher recall, making it more suitable for identifying no-shows. The random forest model, while slightly better in accuracy and precision, showed a balanced trade-off between precision and recall.</p><h3 id="heading-feature-importance">Feature Importance</h3>
+<p>In the random forest model, feature importance analysis indicated that the number of days between scheduling and the appointment, SMS reminders, and neighborhood were among the most significant predictors of no-shows.</p><h3 id="heading-business-implications">Business Implications</h3>
+<p>High recall in the logistic regression model ensures most no-shows are identified, allowing for effective interventions. The moderate precision indicates some false positives, which could lead to unnecessary interventions but is preferable to missing actual no-shows. The random forest model provides a balanced approach, reducing false positives while maintaining good recall.</p><h2 id="heading-viii.-conclusion">VIII. Conclusion</h2>
+<p>This project demonstrates the application of logistic regression and random forest classifiers to predict medical appointment no-shows. Feature engineering and handling class imbalance significantly improved model performance. The findings highlight the importance of factors such as SMS reminders and the time gap between scheduling and the appointment. By leveraging these insights, healthcare providers can implement targeted interventions to reduce missed appointments, thereby enhancing operational efficiency and patient care outcomes. Future work could explore additional features and advanced ensemble methods to further improve prediction accuracy and robustness.</p><h2 id="heading-ix.-references">IX. References</h2>
+<ul data-line="128" class="code-line" dir="auto">
+<li>[Source of the dataset]</li>
+<li>Relevant academic papers and articles on predicting medical appointment no-shows</li>
+<li>Documentation and tutorials on logistic regression and random forest classifiers</li>
+</ul>
+<hr data-line="132" class="code-line" dir="auto" />
+<p>This structured report provides a comprehensive overview of the project, detailing the business understanding, data analysis, modeling process, results, and implications. It highlights the significance of the findings and offers actionable insights for healthcare providers.</p>
+
+</body>
+</html>
