@@ -1,15 +1,9 @@
 # # Create abstraction functions
 # # import the required libraries
-# from re import X
 # import pandas as pd
 # import numpy as np
 # from typing import Any, Dict, List, Literal, Optional, Tuple, Union
-# from sklearn.metrics import (
-#     confusion_matrix,
-#     classification_report,
-#     roc_auc_score,
-#     roc_curve,
-# )
+
 # import matplotlib.pyplot as plt
 
 # # import Random undersampler from imblearn
@@ -63,12 +57,15 @@
 
 #     # Initial stratified split into training and temp set (70% training, 30% temp)
 #     train_set, temp_set = train_test_split(
-#         X, test_size=lvl1_test_size, stratify=X['no_show'], random_state=random_state
+#         X, test_size=lvl1_test_size, stratify=X["no_show"], random_state=random_state
 #     )
 
 #     # Stratified split of the temp set into validation and test sets (each 15% of the total data)
 #     val_set, test_set = train_test_split(
-#         temp_set, test_size=lvl2_test_size, random_state=random_state, stratify=temp_set['no_show']
+#         temp_set,
+#         test_size=lvl2_test_size,
+#         random_state=random_state,
+#         stratify=temp_set["no_show"],
 #     )
 
 #     return (
@@ -228,7 +225,7 @@
 #     pick_results: Literal["validation", "test", "all"]
 #     plot: bool
 #     cls_report_as_dict: bool
-
+    
 #     def __init__(
 #         self,
 #         model,
@@ -254,6 +251,8 @@
 #         self.cls_report_as_dict = cls_report_as_dict
 
 #     def __run_model__(self):
+#         from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
+        
 #         # Fit the model on the training data
 #         self.model.fit(self.X_train, self.y_train)
 #         # Predict the target values
@@ -271,10 +270,18 @@
 #         # Calculate the classification report
 
 #         self.val_classification_report = classification_report(
-#             self.y_val, self.val_y_pred, output_dict=self.cls_report_as_dict if self.cls_report_as_dict == True else False
+#             self.y_val,
+#             self.val_y_pred,
+#             output_dict=(
+#                 self.cls_report_as_dict if self.cls_report_as_dict == True else False
+#             ),
 #         )
 #         self.test_classification_report = classification_report(
-#             self.y_test, self.test_y_pred, output_dict=self.cls_report_as_dict if self.cls_report_as_dict == True else False
+#             self.y_test,
+#             self.test_y_pred,
+#             output_dict=(
+#                 self.cls_report_as_dict if self.cls_report_as_dict == True else False
+#             ),
 #         )
 #         # Calculate the ROC AUC score
 #         self.val_roc_auc_score = float(roc_auc_score(self.y_val, self.val_y_pred_proba))
@@ -531,82 +538,201 @@
 #     return model_runner.invoke()
 
 
-# def preprocessing_pipeline(df:pd.DataFrame, selected_cols:List[str], target_col_label:str)->Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+# def preprocessing_pipeline(
+#     df: pd.DataFrame, selected_cols: List[str], target_col_label: str
+# ) -> Tuple[pd.DataFrame, pd.DataFrame]:
 #     """
 #     This function will take the dataset, apply frequency encoding to the neighbourhood column, and drop the original neighbourhood column, scale the features, and return the transformed dataset.
-    
+
 #     Args:
 #     df (pd.DataFrame): The dataset to be transformed.
 #     selected_cols (list): The columns to be used as features.
 #     target_col_label (str): The label of the target column.
-    
+
 #     Returns:
 #     X_train_scaled (pd.DataFrame): The scaled features.
 #     """
-#     from sklearn.model_selection import train_test_split
-    
-#     X = df[selected_cols]
-#     y = df[target_col_label]
-#     # Split into training and testing sets
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,stratify=y, random_state=42)
-#     X_train, fmap = apply_frequency_encoding(X_train, no_fmap_columns_dict={"neighbourhood": "neighbourhood_freq"})
-#     # Apply frequency encoding to the neighbourhood column for the testing set
-#     X_test, _ = apply_frequency_encoding(X_test, fmap_column_dict={"neighbourhood": "neighbourhood_freq"}, fmap=fmap)
+
+#     X = pd.DataFrame(df[selected_cols], columns=selected_cols)
+#     y = pd.DataFrame(df[target_col_label], columns=[target_col_label])
+
+#     X, _ = apply_frequency_encoding(
+#         X, no_fmap_columns_dict={"neighbourhood": "neighbourhood_freq"}
+#     )
 #     X.drop(columns=["neighbourhood"], axis=1, inplace=True)
-#     X_train.drop(columns=["neighbourhood"], axis=1, inplace=True)
-#     X_test.drop(columns=["neighbourhood"], axis=1, inplace=True)
-#     X_train, _, X_test = scale_features(X_train, X, X_test)
+#     X, _, _ = scale_features(X, X, X)
+#     print(
+#         X.shape,
+#         y.shape,
+#     )
+#     print(X.columns, y.columns)
+#     return (
+#         pd.DataFrame(X, columns=X.columns),
+#         pd.DataFrame(y, columns=[target_col_label]),
+#     )
+
+
+# def split_encode_scale(
+#     df: pd.DataFrame, selected_cols: List[str], target_col_label: str
+# ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+#     """
+#     This function will take the dataset, apply frequency encoding to the neighbourhood column, and drop the original neighbourhood column, scale the features, and return the transformed dataset.
+
+#     Args:
+#     df (pd.DataFrame): The dataset to be transformed.
+#     selected_cols (list): The columns to be used as features.
+#     target_col_label (str): The label of the target column.
+
+#     Returns:
+#     X_train_scaled (pd.DataFrame): The scaled features.
+#     """
+
+#     X = pd.DataFrame(df[selected_cols], columns=selected_cols)
+#     y = pd.DataFrame(df[target_col_label], columns=[target_col_label])
+#     # from sklearn.model_selection import train_test_split
+
+#     # # Split the dataset into training, validation and testing sets
+#     # X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
+#     # X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
     
-#     return (pd.DataFrame(X_train, columns=X.columns), pd.DataFrame(X_test, columns=X.columns), pd.DataFrame(y_train, columns=[target_col_label]), pd.DataFrame(y_test, columns=[target_col_label]), pd.DataFrame(y, columns=[target_col_label]))
-
-# from sklearn.model_selection import cross_val_score, StratifiedKFold
-# from scipy.stats import ttest_rel
-
-# from utility.utils import preprocessing_pipeline
-
-# # Define evaluation metrics
-# scoring = ['accuracy', 'precision', 'recall', 'f1', 'roc_auc']
-# n_splits = 10
-# # Choose cross-validation method
-# k_folds = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-
-# # Select models
-# models = {
-#     'Logistic Regression': LogisticRegression(C=10, random_state=42, max_iter=2500),
-#     'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42)
-# }
-# X_train, X_test, y_train, y_test, _ = preprocessing_pipeline(df=dfm, selected_cols=['age', 'scholarship', 'hypertension', 'sms_received', 'neighbourhood', 'days_between', 'previous_no_shows', 'cumulative_appointments'], target_col_label='no_show')
-
-# print(X_train.shape, y_train.shape)
-# print(X_train.head())
-# print(y_train.head())
-# # Perform cross-validation and record results
-# results = {}
-# for model_name, model in models.items():
-#     model_results = {}
-#     for metric in scoring:
-#         scores = cross_val_score(model, X_train, y_train, cv=k_folds, scoring=metric)
-#         model_results[metric] = scores.mean()
-#     results[model_name] = model_results
-
-# # Print results
-# for model_name, model_result in results.items():
-#     print(f"Model: {model_name}")
-#     for metric, score in model_result.items():
-#         print(f"{metric}: {score}")
-
-# # Perform statistical tests
-# metric_of_interest = 'accuracy'
-# model1_scores = [results['Logistic Regression'][metric_of_interest] for _ in range(n_splits)]
-# model2_scores = [results['Random Forest'][metric_of_interest] for _ in range(n_splits)]
-# t_statistic, p_value = ttest_rel(model1_scores, model2_scores)
-
-# # Evaluate significance
-# alpha = 0.05
-# if p_value < alpha:
-#     print("Performance difference is statistically significant.")
-# else:
-#     print("Performance difference is not statistically significant.")
+#     # X_train, fmap = apply_frequency_encoding( X_train, no_fmap_columns_dict={"neighbourhood": "neighbourhood_freq"})
+#     # X_train.drop(columns=["neighbourhood"], axis=1, inplace=True)
+#     # X_val, _ = apply_frequency_encoding( X_val, fmap_column_dict={"neighbourhood": "neighbourhood_freq"}, fmap=fmap)
+#     # X_val.drop(columns=["neighbourhood"], axis=1, inplace=True)
+#     # X_test, _ = apply_frequency_encoding( X_test, fmap_column_dict={"neighbourhood": "neighbourhood_freq"}, fmap=fmap)
+#     # X_test.drop(columns=["neighbourhood"], axis=1, inplace=True)
+#     # X_train, X_val, X_test = scale_features(X_train, X_val, X_test)
+    
+#     # print('Training Set:', X_train.shape, y_train.shape)
+#     # print('Validation Set:', X_val.shape, y_val.shape)
+#     # print('Testing Set:', X_test.shape, y_test.shape)
+    
+#     # return (
+#     #     pd.DataFrame(X_train, columns=X_train.columns),
+#     #     pd.DataFrame(y_train, columns=[target_col_label]),
+#     #     pd.DataFrame(X_val, columns=X_val.columns),
+#     #     pd.DataFrame(y_val, columns=[target_col_label]),
+#     #     pd.DataFrame(X_test, columns=X_test.columns),
+#     #     pd.DataFrame(y_test, columns=[target_col_label]),
+#     # )
+#     X_train, freq_map = apply_frequency_encoding(
+#         X_train, no_fmap_columns_dict={"neighbourhood": "neighbourhood_freq"}
+#     )
+#     X_train.drop(columns=["neighbourhood"], axis=1, inplace=True)
+#     X_test, _ = apply_frequency_encoding(
+#         X_test, fmap_column_dict={"neighbourhood": "neighbourhood_freq"}, fmap=freq_map
+#     )
+#     X_test.drop(columns=["neighbourhood"], axis=1, inplace=True)
+#     X_train, _, X_test = scale_features(X_train, X_train, X_test)
+#     print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+#     print(X_train.columns, y_train.columns, X_test.columns, y_test.columns)
+#     return (
+#         pd.DataFrame(X_train, columns=X_train.columns),
+#         pd.DataFrame(y_train, columns=[target_col_label]),
+#         pd.DataFrame(X_test, columns=X_test.columns),
+#         pd.DataFrame(y_test, columns=[target_col_label]),
+#     )
 
 
+# # def stratified_kfold_cv(
+# #     x_train: pd.DataFrame,
+# #     y_train: pd.DataFrame,
+# #     kfold_splits: int = 5,
+# #     random_state: int = 42,
+# #     scoring: str | List[str] = ["accuracy", "precision", "recall", "f1", "roc_auc"],
+# #     lr_params: Dict[str, Any] = {},
+# #     rf_params: Dict[str, Any] = {},
+# # ):
+# #     """
+# #     This function will perform stratified kfold cross validation on the training data. It will return the accuracy, precision, recall, f1, and roc_auc scores for the logistic regression and random forest models. It will also plot the ROC AUC curve for the models neatly.
+
+# #     Args:
+# #     x_train (pd.DataFrame): The training features.
+# #     y_train (pd.DataFrame): The training target variable.
+
+
+# #     """
+# #     from sklearn.model_selection import StratifiedKFold, cross_validate
+# #     from sklearn.linear_model import LogisticRegression
+# #     from sklearn.ensemble import RandomForestClassifier
+
+# #     # # Choose cross-validation method
+# #     # kfolds = StratifiedKFold(n_splits=kfold_splits, shuffle=True)
+
+# #     # # Select models
+# #     # models = {
+# #     #     'Logistic Regression': LogisticRegression(random_state=random_state, **lr_params),
+# #     #     'Random Forest': RandomForestClassifier(random_state=random_state, **rf_params)
+# #     # }
+# #     # print(x_train.shape, y_train.shape)
+# #     # print(x_train.head())
+# #     # print(y_train.head())
+# #     # # Perform cross-validation and record results using cross_validate
+# #     # results = {}
+# #     # for name, model in models.items():
+# #     #     cv_results = cross_validate(estimator=model, X=x_train, y=y_train, cv=kfolds, scoring=scoring,verbose=True, n_jobs=-1)
+# #     #     print('--cv results--',cv_results)
+# #     #     results[name] = cv_results
+
+# #     # # Perform mean() on the results
+# #     # for model, result in results.items():
+# #     #     for metric, scores in result.items():
+# #     #         results[model][metric] = np.mean(scores)
+
+# #     # # Return a dataframe of the results per model
+# #     # results_df = pd.DataFrame(results).T
+# #     # return results_df
+
+
+# def cross_val_report(
+#     model, X, y, n_splits=5, random_state=42, target_names=None, model_name='Model'
+# ):
+#     from sklearn.model_selection import StratifiedKFold
+#     from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+#     from imblearn.under_sampling import RandomUnderSampler
+
+#     cv = StratifiedKFold(n_splits=n_splits, random_state=random_state, shuffle=True)
+#     y_true = []
+#     y_pred = []
+#     roc_auc_scores = []
+
+#     for train_index, test_index in cv.split(X, y):
+#         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+#         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+#         # Apply random undersampling to the training data
+#         rus = RandomUnderSampler(random_state=random_state)
+#         X_train_res, y_train_res = rus.fit_resample(X_train, y_train)
+
+#         model.fit(X_train_res, y_train_res)
+#         y_test_pred = model.predict(X_test)
+
+#         # If the model has a predict_proba method, calculate ROC AUC score
+#         if hasattr(model, "predict_proba"):
+#             y_test_prob = model.predict_proba(X_test)[:, 1]
+#             roc_auc = roc_auc_score(y_test, y_test_prob)
+#         else:
+#             roc_auc = roc_auc_score(y_test, y_test_pred)
+
+#         roc_auc_scores.append(roc_auc)
+#         y_true.append(y_test)
+#         y_pred.append(y_test_pred)
+
+#     y_true = np.concatenate(y_true)
+#     y_pred = np.concatenate(y_pred)
+
+#     report = classification_report(y_true, y_pred, target_names=target_names)
+#     cm = confusion_matrix(y_true, y_pred)
+#     avg_roc_auc = np.mean(roc_auc_scores)
+
+#     # Create a DataFrame for a cleaner confusion matrix output
+#     cm_df = pd.DataFrame(cm, index=target_names, columns=target_names)
+    
+#     print(f'{model_name} Confusion Matrix:')
+#     print(cm_df)
+#     print(f'{model_name} Classification Report:')
+#     print(report)
+#     print(f'{model_name} Average ROC AUC Score: {avg_roc_auc:.4f}')
+    
+#     return report, cm_df, avg_roc_auc
 

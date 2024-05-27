@@ -5,7 +5,7 @@
 2. Determine what factors contribute the most to a person missing their appointment.
 3. Compare the performance of the 2 data mining/analysis methods implemented for this project.
 
-##I. Business Understanding
+## I. Business Understanding
 
 Missed appointments are costly on the medical institutions. Therefore, understanding the factors that cause no-shows are vital in the search for potential solutions to these problems. Having the information about the data set have the following benefits:
 
@@ -100,15 +100,6 @@ As we proceed with the data modeling stage, two data modeling techniques were ch
 1. Logistic Regression Classifier
 2. Neural Network Classifier
 
-This is the order of steps that will be followed:
-1. Perform feature engineering.
-    - Convert categorical features to numerical. This can be done via one hot encoding.
-    - Create new features as needed.
-    - Perform feature selection.
-3. Split dataset into training, validation and testing sets.
-4. Design and train the models on the training set and hypertune with validation set.
-5. Evaluate the model's performance via accuracy, F1, confusion matrix and ROC AUC results from testing set.
-
 ## 1. Convert categorical features to numerical
 
 ## Model Design Thought Process
@@ -143,210 +134,289 @@ I will select the best 3 features with the highest importance from the results o
 # Pearson Correlation Coefficient
 As there are only 2 input features,adding to the previously selected 3 features from the Chi-Square test gives 5 features which is not too much for the model. So after visualization, we can add both features as inputs for the models and evaluate the performance.
 
-### Evaluation of the Logistic Regression Model on the Validation Set
+# Stratified K-Fold Cross Validation on Training Set With Logistic Regression and Random Forest
 
-#### 1. Model Performance Metrics
+This stage involved the validation of the base models of Logistic Regression and Random Forest Classifier. These models are widely used in classification problems and compatible with the dataset for this project.
 
-**Accuracy**: 0.63
+This was implemented via cross_val_score from the sklearn library with a stratified K-Fold of 5 number of splits with shuffling set to true. This enables validating of the models on the training consistently as a simple train, validation, test split may generate inconsistent metrics depending on the split distribution per turn.
 
-The accuracy of the model is 63%, which indicates that 63% of the predictions made by the model are correct. However, accuracy alone is not a sufficient metric to evaluate the performance of the model, especially in the presence of class imbalance.
+**Hyperparameter Tuning with GridSearchCV**
 
-**Confusion Matrix**:
-```
-                 Predicted Negative  Predicted Positive
-Actual Negative                5543                2492
-Actual Positive                1483                1235
-```
+The base logistic regression and random forest models performed poorly especially on metrics for the positive class (No Shows 1). Base Random Forest Classifier performed the worst out of the two, in predicting patient's not showing up which is the main concern for the project. However, we can use GridSearchCV, a method provided by the scikit-learn library that exhaustively runs the base models using all possible combinations of a parameter grid to perform validation. The best model is returned with the optimal hyperparameters.
+To perform hyperparameter tuning, I will:
+1. Define the hyperparameters to tune for each model
+2. Use the training set for 
+3. Run GridSearchCV cross-validation for each model on the training set with a K-fold of 5 and store the optimal parameters.
+4. Store the optimal parameters and their respective scores. These will be determined using multi-metric scoring based on f1-score, roc auc, and accuracy.
 
-**Classification Report**:
-```
-              precision    recall  f1-score   support
+Optimal Parameters and Scores for each model:
+lr:
+Optimal Parameters: {'C': 1, 'max_iter': 1000, 'penalty': 'l2', 'solver': 'liblinear'}
+Score: 0.5962295522051984
 
-           0       0.79      0.69      0.74      8035
-           1       0.33      0.45      0.38      2718
+rf:
+Optimal Parameters: {'max_depth': 40, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 150}
+Score: 0.5905073703760599
 
-    accuracy                           0.63     10753
-   macro avg       0.56      0.57      0.56     10753
-weighted avg       0.67      0.63      0.65     10753
-```
+With GridSearchCV, it is observed that the best parameters found for the models still yields a poor ROC_AUC score. Therefore even with hyperparameter tuning, the models do not generalize or predict the positive class well.
 
-**ROC AUC Score**: 0.58
+Optimal Parameters and Scores for each model:
+Logistic Regression:
+Optimal Parameters: {'C': 10, 'max_iter': 1000, 'penalty': 'l1', 'solver': 'liblinear'}
+Score: 0.5955464221008817
+Random Forest:
+Optimal Parameters: {'max_depth': 40, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 150}
+Score: 0.5888504250473339
 
-#### 2. Detailed Analysis
 
-**Precision, Recall, and F1-Score**:
-- **Precision for No-Show (Class 1)**: 0.33
-  - This indicates that when the model predicts a patient will miss an appointment, it is correct only 33% of the time.
-- **Recall for No-Show (Class 1)**: 0.45
-  - This indicates that the model correctly identifies 45% of the actual missed appointments.
-- **F1-Score for No-Show (Class 1)**: 0.38
-  - The F1-score is the harmonic mean of precision and recall, providing a balance between the two. A score of 0.38 indicates poor performance in predicting missed appointments.
 
-**ROC AUC Score**: 0.58
-- The ROC AUC score of 0.58 indicates that the model has limited ability to distinguish between patients who will attend and those who will not. A score closer to 1 indicates better discrimination, while a score closer to 0.5 suggests random guessing.
-
-**Confusion Matrix**:
-- **True Positives (TP)**: 1235 (Patients predicted as No-Show who actually missed)
-- **False Positives (FP)**: 2492 (Patients predicted as No-Show who actually attended)
-- **True Negatives (TN)**: 5543 (Patients predicted as Show who actually attended)
-- **False Negatives (FN)**: 1483 (Patients predicted as Show who actually missed)
-
-The model's confusion matrix reveals that:
-- It correctly predicts 1235 out of 2718 actual missed appointments.
-- It incorrectly predicts 1483 missed appointments as attended.
-- It incorrectly predicts 2492 attended appointments as missed.
-- It correctly predicts 5543 out of 8035 actual attended appointments.
-
-#### 3. Relation to Business Understanding and Goals
-
-The primary business goal is to identify patients who are likely to miss their appointments so that interventions (such as reminders) can be targeted to improve attendance rates. Given this goal, the performance of the logistic regression model can be evaluated as follows:
-
-**Recall for No-Show (45%)**:
-- Recall is crucial in this context because we want to identify as many no-show patients as possible. A recall of 45% means that more than half of the patients who miss their appointments are not being identified by the model, which is suboptimal for the business goal.
-
-**Precision for No-Show (33%)**:
-- Precision is important to ensure that resources (like reminders) are not wasted on patients who are likely to attend. With a precision of 33%, the model is generating a large number of false positives, meaning many patients who are predicted to miss their appointments actually attend. This inefficiency could lead to wasted efforts and resources.
-
-**F1-Score (38%)**:
-- The F1-score, which balances precision and recall, is low. This suggests that the overall effectiveness of the model in identifying no-shows while minimizing false predictions is not satisfactory.
-
-**ROC AUC Score (0.58)**:
-- An ROC AUC score of 0.58 indicates the model's poor performance in distinguishing between the two classes (show vs. no-show). It is only slightly better than random guessing, highlighting the need for improvement.
-
-#### 4. Recommendations for Improvement
-
-To achieve the business goal of accurately identifying patients who are likely to miss their appointments, the following steps can be taken to improve the model:
-
-1. **Feature Engineering**: Create additional features that may better capture the patterns associated with missed appointments, such as interaction terms or derived features from existing ones (e.g., days between scheduling and appointment).
-
-2. **Addressing Class Imbalance**: While the training set was undersampled, consider using techniques like Synthetic Minority Over-sampling Technique (SMOTE) to generate synthetic samples for the minority class or adjusting class weights in the logistic regression model to give more importance to the minority class.
-
-3. **Model Tuning**: Perform hyperparameter tuning using techniques like GridSearchCV or RandomizedSearchCV to find the optimal parameters for the logistic regression model.
-
-4. **Ensemble Methods**: Explore ensemble methods such as Random Forest, Gradient Boosting, or XGBoost, which might capture more complex patterns in the data.
-
-5. **Threshold Adjustment**: Fine-tune the classification threshold to find a balance that improves recall for the no-show class without drastically reducing precision.
-
-By addressing these areas, the model can be enhanced to better meet the business objective of predicting no-show appointments, thereby enabling more effective interventions and improving overall attendance rates.
-
-Feature engineering is a critical step in improving the performance of machine learning models, particularly when initial attempts with other methods have not yielded significant improvements. Below are some proposed new features that could potentially enhance the model's ability to predict no-shows, along with reasons for their inclusion:
+Feature engineering is another way of improving the performance of machine learning models, particularly when initial attempts with other methods have not yielded significant improvements. Below are some proposed new features that could potentially enhance the model's ability to predict no-shows:
 
 ### Proposed New Features
 
 1. **Days Between Scheduling and Appointment**
    - **Reason**: The time gap between when an appointment is scheduled and when it is actually held could influence the likelihood of a no-show. Longer gaps may lead to more no-shows due to changes in patients' schedules or forgotten appointments.
-   
 2. **Previous No-Shows**
    - **Reason**: Patients with a history of no-shows are more likely to miss future appointments. This feature can capture the no-show behavior of patients.
-   ```python
-   df['previous_no_shows'] = df.groupby('patient_id')['no_show'].transform('sum')
-   ```
-
-3. **Cumulative Appointments**
-   - **Reason**: The total number of past appointments a patient has scheduled can provide insights into their reliability and commitment to attending appointments.
-   ```python
-   df['cumulative_appointments'] = df.groupby('patient_id').cumcount() + 1
-   ```
 
 
 **Handle rows where days_between is negative as appointment day cannot come before the scheduled day.**
 
 **There are a lot of negatives. After inspecting, we can see that the scheduled_day has the time included while the appointment day doesnt. This leads to the scheduled_day being ahead by time. This can be resolved by removing time from the scheduled day.**
 
-### Detailed Evaluation of the Logistic Regression Model
+**Predict target variable given new features**
 
-#### Goal and Business Understanding
-The goal is to predict patients who are likely to miss their appointments (i.e., `no_show` = 1) so that intervention measures can be taken to improve attendance rates. The key is to minimize missed appointments, which can help improve the efficiency of healthcare services and ensure better utilization of resources.
+This stage involves predicting the classes using the new features added to the dataframe. From the results, a significant improvement was observed after a 5-fold cross validation.
+Both models were able to predict No-shows significantly better. This shows a clear positive impact of the derived features via feature engineering. One can attempt to improve this performance even further as although the f1-score for the No show improved for both models, through a round of hyper parameter tuning, the models might improve even more in these metrics.
 
-#### Model Performance Metrics
+Logistic Regression Confusion Matrix:
+          Show  No-show
+Show     59375    11064
+No-show   2793    15025
+Logistic Regression Classification Report:
+              precision    recall  f1-score   support
 
-1. **Accuracy: 0.88**
-   - This means that 88% of the predictions made by the model are correct. While this is a high accuracy, it is not the sole metric to consider, especially with class imbalance.
+        Show       0.96      0.84      0.90     70439
+     No-show       0.58      0.84      0.68     17818
 
-2. **Confusion Matrix:**
-   ```
-                     Predicted Negative  Predicted Positive
-   Actual Negative                6747                1329
-   Actual Positive                   0                2677
-   ```
-   - **True Negatives (TN):** 6747 - Patients who were predicted to attend and did attend.
-   - **False Positives (FP):** 1329 - Patients who were predicted to miss but attended.
-   - **False Negatives (FN):** 0 - Patients who were predicted to attend but missed.
-   - **True Positives (TP):** 2677 - Patients who were predicted to miss and did miss.
+    accuracy                           0.84     88257
+   macro avg       0.77      0.84      0.79     88257
+weighted avg       0.88      0.84      0.85     88257
 
-3. **Classification Report:**
-   ```
-                 precision    recall  f1-score   support
+Logistic Regression Average ROC AUC Score: 0.9065
 
-              0       1.00      0.84      0.91      8076
-              1       0.67      1.00      0.80      2677
+Random Forest Classifier Confusion Matrix:
+          Show  No-show
+Show     59175    11264
+No-show   1126    16692
+Random Forest Classifier Classification Report:
+              precision    recall  f1-score   support
 
-       accuracy                           0.88     10753
-      macro avg       0.83      0.92      0.86     10753
-   weighted avg       0.92      0.88      0.88     10753
-   ```
-   - **Precision (no_show=0):** 1.00
-     - This means that out of all the patients predicted to attend, 100% actually attended.
-   - **Recall (no_show=0):** 0.84
-     - Out of all the patients who actually attended, 84% were correctly predicted.
-   - **Precision (no_show=1):** 0.67
-     - Out of all the patients predicted to miss, 67% actually missed.
-   - **Recall (no_show=1):** 1.00
-     - Out of all the patients who actually missed, 100% were correctly predicted.
-   - **F1-score:**
-     - A harmonic mean of precision and recall. For no_show=1, it is 0.80, which indicates a good balance.
+        Show       0.98      0.84      0.91     70439
+     No-show       0.60      0.94      0.73     17818
 
-4. **ROC AUC Score: 0.94**
-   - The ROC AUC score of 0.94 indicates excellent discriminatory ability of the model to distinguish between patients who will attend and those who will miss their appointments.
+    accuracy                           0.86     88257
+   macro avg       0.79      0.89      0.82     88257
+weighted avg       0.90      0.86      0.87     88257
 
-### Interpretation and Insights
+Random Forest Classifier Average ROC AUC Score: 0.9289
 
-1. **High Recall for no_show=1 (Missed Appointments):**
-   - The recall for predicting missed appointments is perfect (1.00), meaning the model correctly identifies all patients who will miss their appointments. This is crucial for the business goal since it ensures no potential no-show is missed by the model.
+**Hyper parameter Tuning Using GridSearchCV and Derived Features**
 
-2. **Moderate Precision for no_show=1:**
-   - The precision for predicting missed appointments is 0.67, indicating that 33% of the predicted no-shows will actually attend their appointments. This can lead to unnecessary interventions for some patients.
+The results with tuning is also greatly improved. With the metric scoring being ROC AUC, the GridSearchCV provided the optimal parameters for Logistic Regression and Random Forest Classifier. However, it is observed the score for Logistic regression was slightly lower with the optimal parameters than the base model. This may be due to the GridSearchCV limitation where implementing random undersampling was not possible. Nevertheless, the ROC AUC score was satisfactory (close to 1). The evaluation of the base and tuned logistic regression models may be done and results compared to see if tuning was impactful.
 
-3. **No False Negatives:**
-   - There are no false negatives, meaning the model does not incorrectly classify any actual no-show as a show. This is highly desirable because it avoids missing out on patients who need intervention.
+Optimal Parameters and Scores for each model:
+lr:
+Optimal Parameters: {'C': 1, 'max_iter': 1000, 'penalty': 'l1', 'solver': 'liblinear'}
+Score: 0.896095247038778
 
-4. **Impact on Business:**
-   - **High Recall:** Ensures that almost all patients who are likely to miss their appointments are identified, allowing for targeted interventions such as reminders or rescheduling.
-   - **Moderate Precision:** While there is a risk of some false positives, the impact is less critical than false negatives in this scenario. However, reducing false positives could lead to more efficient resource allocation.
+rf:
+Optimal Parameters: {'max_depth': 40, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 150}
+Score: 0.9401006893521581
 
-**After testing with diverse split distributions for the dataset splits, one can observe that the model has definitely improved with the addition of these two new features. The accuracy improved up to 86.6% on average as well as the very important recall. The ROC AUC score of 0.91 shows the model prediction capacity is very distinguishable from random guessing.**
+**Perform validation using optimal parameters**
 
-**Random Forest Classifier Model.
-Implementing this model without the new features yielded poorer performance than Logistic Regression without the features.**
+To identify the performance difference with and without hyperparameter tuning, I validated the models with the parameters set. However, for logistic regression, the difference was negligible (0.9065 - 0.9079) for the ROC AUC score. This means the model did not benefit much from hyperparameter tuning. Instead, feature engineering contributed the most.
 
-**Performance is much higher with the new features**
+Logistic Regression (Optimal) Confusion Matrix:
+          Show  No-show
+Show     58655    11784
+No-show   2213    15605
+Logistic Regression (Optimal) Classification Report:
+              precision    recall  f1-score   support
 
-### Evaluation of Model Performance:
+        Show       0.96      0.83      0.89     70439
+     No-show       0.57      0.88      0.69     17818
 
-**Business Goal:** To predict patient no-shows accurately so that the clinic can take preemptive actions to reduce missed appointments.
+    accuracy                           0.84     88257
+   macro avg       0.77      0.85      0.79     88257
+weighted avg       0.88      0.84      0.85     88257
 
-**Logistic Regression:**
-- **Accuracy:** 87.94%
-- **Precision:** 69.43%
-- **Recall:** 91.07%
-- **F1 Score:** 78.79%
-- **ROC AUC:** 0.9465
+Logistic Regression (Optimal) Average ROC AUC Score: 0.9079
 
-**Random Forest:**
-- **Accuracy:** 88.71%
-- **Precision:** 73.78%
-- **Recall:** 83.90%
-- **F1 Score:** 78.51%
-- **ROC AUC:** 0.9450
+For Random Forest Classifier, the results simply observing the numbers improved with tuning when compared to the base model. It was also higher values than the logistic regression model (base and tuned).
 
-### Detailed Interpretation:
+Random Forest Classifier (Optimal) Confusion Matrix:
+          Show  No-show
+Show     59250    11189
+No-show    749    17069
+Random Forest Classifier (Optimal) Classification Report:
+              precision    recall  f1-score   support
 
-The logistic regression model achieves a high recall of 91.07%, meaning it effectively identifies most patients who will not show up for their appointments. This high recall is essential in a clinical setting where the goal is to minimize no-shows by predicting and intervening with those likely to miss their appointments. The model’s accuracy and F1 score also indicate good overall performance, with an ROC AUC of 0.9465, signifying strong discriminative ability between patients who will show and those who won't.
+        Show       0.99      0.84      0.91     70439
+     No-show       0.60      0.96      0.74     17818
 
-On the other hand, the random forest model achieves a slightly higher accuracy of 88.71% and a precision of 73.78%, meaning it is better at reducing false positives—patients predicted to no-show but actually show up. This model provides a balanced approach with strong overall performance and an ROC AUC of 0.9450. The recall of 83.90%, while slightly lower than logistic regression, is still substantial, ensuring a significant number of no-shows are accurately predicted.
+    accuracy                           0.86     88257
+   macro avg       0.80      0.90      0.82     88257
+weighted avg       0.91      0.86      0.87     88257
 
-### Business Implications:
+Random Forest Classifier (Optimal) Average ROC AUC Score: 0.9367
 
-The logistic regression model’s high recall makes it suitable for scenarios where catching as many no-shows as possible is critical. This approach maximizes the clinic’s ability to intervene with patients likely to miss appointments, improving overall attendance rates. However, the random forest model offers a balanced trade-off between precision and recall, which could be beneficial to minimize unnecessary interventions, reducing potential resource wastage.
+## Model Testing without Random Undersampling
 
-Given the statistically significant performance difference, the random forest model’s slight edge in accuracy and precision might be preferred for a balanced and reliable prediction strategy. However, if the priority is to ensure almost all no-shows are captured, logistic regression might be more suitable.
+So far, through feature engineering, we have been able to improve the models' performance significantly as they are able to generalize more on the positive and negative class predictions. Also, hyperparameter tuning the model has been validated and showed a modest but positive impact on the model performance. One can safely proceed to fitting these tuned models on the complete training data and test their performance on the testing set which comprises 20% of the entire dataset. To have exhaustive understanding, this stage performs testing without training data random undersampling and with this resampling. The testing set maintained the class imbalance to mimic the real word as much as possible.
+Logistic Regression Model:
+Classification Report:
+              precision    recall  f1-score   support
+
+        Show       0.84      0.95      0.89     17610
+     No-show       0.61      0.31      0.41      4455
+
+    accuracy                           0.82     22065
+   macro avg       0.73      0.63      0.65     22065
+weighted avg       0.80      0.82      0.80     22065
+
+Confusion Matrix:
+                Predicted Show  Predicted No-show
+Actual Show              16720                890
+Actual No-show            3085               1370
+ROC-AUC Score:
+0.6284900873202974
+
+Random Forest Classifier Model:
+Classification Report:
+              precision    recall  f1-score   support
+
+        Show       0.94      0.90      0.92     17610
+     No-show       0.66      0.78      0.72      4455
+
+    accuracy                           0.87     22065
+   macro avg       0.80      0.84      0.82     22065
+weighted avg       0.89      0.87      0.88     22065
+
+Confusion Matrix:
+                Predicted Show  Predicted No-show
+Actual Show              15805               1805
+Actual No-show             962               3493
+ROC-AUC Score:
+0.8407821351887225
+
+# Model Testing With Training set Random Undersampling
+
+Randomly undersampling the training set produced high ROC AUC scores for both models. This showed that class imbalance negatively impacts a model's performance. The results are as follows:
+
+Logistic Regression Model (Random Under Sampling):
+Classification Report:
+              precision    recall  f1-score   support
+
+        Show       0.96      0.83      0.89     17610
+     No-show       0.57      0.87      0.69      4455
+
+    accuracy                           0.84     22065
+   macro avg       0.76      0.85      0.79     22065
+weighted avg       0.88      0.84      0.85     22065
+
+Confusion Matrix:
+                Predicted Show  Predicted No-show
+Actual Show              14624               2986
+Actual No-show             562               3893
+ROC-AUC Score:
+0.8521434293722766
+
+Random Forest Classifier Model (Random Under Sampling):
+Classification Report:
+              precision    recall  f1-score   support
+
+        Show       0.99      0.84      0.91     17610
+     No-show       0.60      0.95      0.74      4455
+
+    accuracy                           0.86     22065
+   macro avg       0.79      0.90      0.82     22065
+weighted avg       0.91      0.86      0.87     22065
+
+Confusion Matrix:
+                Predicted Show  Predicted No-show
+Actual Show              14775               2835
+Actual No-show             208               4247
+ROC-AUC Score:
+0.8961614058434046
+
+## Model Evaluation
+
+Both fitted models' results have been established to perform well on the testing dataset, confirming their ability to predict the No-show class. However, to decide on the best model, accuracy which is the proportion of items that were classified correctly, alone is not the only metric to consider as ROC AUC score and f1-score better describe the models' performance contrasts a random guessing classifier. For the goal of hospitals, predicting the positive class (patient will miss an appointment) is likely to be more important than the negative class. But in the real world, the negative class is usually the majority. Therefore, this class imbalance reduces the importance of accuracy and emphasizes recall, precision, f1-score and ROC AUC score, especially for the positive class. On these metrics, these models perform well. But the goal of this phase is to determine if the performance difference based on the metric interests mentioned are statistically significant. We can also determine the metrics on a 95% confidence interval.
+
+Logistic Regression metrics with 95% CI:
+Accuracy: Mean = 0.8414, 95% CI = (0.8382, 0.8441)
+ROC AUC: Mean = 0.9029, 95% CI = (0.8998, 0.9061)
+Class 0 Precision: Mean = 0.5718, 95% CI = (0.5606, 0.5817)
+Class 0 Recall: Mean = 0.8466, 95% CI = (0.8414, 0.8548)
+Class 0 F1 Score: Mean = 0.6826, 95% CI = (0.6731, 0.6906)
+Class 1 Precision: Mean = 0.5718, 95% CI = (0.5606, 0.5817)
+Class 1 Recall: Mean = 0.8466, 95% CI = (0.8414, 0.8548)
+Class 1 F1 Score: Mean = 0.6826, 95% CI = (0.6731, 0.6906)
+
+Random Forest metrics with 95% CI:
+Accuracy: Mean = 0.8590, 95% CI = (0.8560, 0.8639)
+ROC AUC: Mean = 0.9337, 95% CI = (0.9313, 0.9367)
+Class 0 Precision: Mean = 0.5921, 95% CI = (0.5812, 0.6044)
+Class 0 Recall: Mean = 0.9515, 95% CI = (0.9477, 0.9548)
+Class 0 F1 Score: Mean = 0.7300, 95% CI = (0.7216, 0.7396)
+Class 1 Precision: Mean = 0.5921, 95% CI = (0.5812, 0.6044)
+Class 1 Recall: Mean = 0.9515, 95% CI = (0.9477, 0.9548)
+Class 1 F1 Score: Mean = 0.7300, 95% CI = (0.7216, 0.7396)
+
+
+Two-sample z-test for accuracy:
+Z-statistic: -6.9736
+P-value: 0.0000
+There is a statistically significant difference in accuracy between the two models.
+Model 2 is the winning model for accuracy.
+Two-sample z-test for roc_auc:
+Z-statistic: -14.6491
+P-value: 0.0000
+There is a statistically significant difference in roc_auc between the two models.
+Model 2 is the winning model for roc_auc.
+Two-sample z-test for precision (class 0):
+Z-statistic: -2.5335
+P-value: 0.0113
+There is a statistically significant difference in precision (class 0) between the two models.
+Model 2 is the winning model for precision (class 0).
+Two-sample z-test for precision (class 1):
+Z-statistic: -2.5335
+P-value: 0.0113
+There is a statistically significant difference in precision (class 1) between the two models.
+Model 2 is the winning model for precision (class 1).
+Two-sample z-test for recall (class 0):
+Z-statistic: -27.1828
+P-value: 0.0000
+There is a statistically significant difference in recall (class 0) between the two models.
+Model 2 is the winning model for recall (class 0).
+Two-sample z-test for recall (class 1):
+Z-statistic: -27.1828
+P-value: 0.0000
+There is a statistically significant difference in recall (class 1) between the two models.
+Model 2 is the winning model for recall (class 1).
+Two-sample z-test for f1_score (class 0):
+Z-statistic: -7.4031
+P-value: 0.0000
+There is a statistically significant difference in f1_score (class 0) between the two models.
+Model 2 is the winning model for f1_score (class 0).
+Two-sample z-test for f1_score (class 1):
+Z-statistic: -7.4031
+P-value: 0.0000
+There is a statistically significant difference in f1_score (class 1) between the two models.
+Model 2 is the winning model for f1_score (class 1).
+
+## Conclusion
+
+
